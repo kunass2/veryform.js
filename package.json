@@ -1,0 +1,32 @@
+{
+  "name": "jquery.veryform",
+  "version": "1.1",
+  "description": "Very Good Form with regular expressions. Make Your life better and easier",
+  "filename": "jquery.veryform.min.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kunass2/veryform.js.git"
+  },
+  "keywords": [
+    "form",
+    "regular",
+    "expression",
+    "validation",
+    "smart",
+    "simple"
+  ],
+  "author": "Bartłomiej Semańczyk kunass2 bartekss2@gmail.com",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kunass2/veryform.js/issues"
+  },
+  "homepage": "http://veryform.blue-world.pl",
+  "autoupdate": {
+    "source": "git",
+    "target": "git://github.com/kunass2/veryform.js.git",
+    "basePath": "",
+    "files": [
+      "js/*"
+    ]
+  }
+}
