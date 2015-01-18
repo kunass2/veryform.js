@@ -1,7 +1,7 @@
 /**
  * Copyright (c) Bartłomiej Semańczyk - bartekss2@gmail.com http://www.blue-world.pl
  * @version 1.1
- * Last Update: Monday, 12 January 2015
+ * Last Update: Sunday, 18 January 2015
 */
 
 (function($) {
@@ -11,7 +11,7 @@
 		main: "veryform",
 		elem: "veryform-item",
 		wrap: 'veryform-wrap',
-		warning: 'veryform-warnig',
+		warning: 'veryform-warning',
 		positive: 'veryform-true',
 		negative: 'veryform-false',
 		failure: 'veryform-failure',
@@ -62,6 +62,7 @@
 				displayWarnings: true,
 				maxFileSize: 5000000,
 				validateOnSubmit: true,
+				init: true,
 				autoinit: false,
 				on: 'keyup',
 				exclude: '',
@@ -69,8 +70,8 @@
 				regex: {},
 				warnings: {}
 			};
-			this.elemsCounter = 0;
 
+			this.elemsCounter = 0;
 
 			this.updateOptions(opts);
 
@@ -98,7 +99,6 @@
 				that.add($(this));
 			});
 
-			// console.log(that.datas);
 			that.setHandlers();
 		};
 
@@ -124,7 +124,9 @@
 			this.valid(elem);
 
 			if (this.defaults.autoinit) {
-				this.checkStatus(elem);
+				this.valid(elem);
+				this.performAction(elem);
+				this.checkGlobalStatus();
 			}
 
 			if (this.$instance.find(this.defaults.exclude).is(elem)) {
