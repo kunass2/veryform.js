@@ -1,7 +1,7 @@
 /**
  * Copyright (c) Bartłomiej Semańczyk - bartekss2@gmail.com http://www.blue-world.pl
- * @version 1.1
- * Last Update: Sunday, 18 January 2015
+ * @version 1.2
+ * Last Update: Monday, 19 January 2015
 */
 
 (function($) {
@@ -55,7 +55,7 @@
 
 		var Formex_Class = function(instance, opts) {
 			this.$instance;
-			this.elems;
+			this.elems = $();
 			this.datas = {};
 			this.defaults = {
 				wrap: true,
@@ -80,6 +80,11 @@
 				this.$instance = $(instance);
 			}
 
+			var data = this.$instance.data('veryform');
+			if (data) {
+				return data;
+			}
+
 			if (this.defaults.init) {
 				this.init();
 			}
@@ -88,104 +93,112 @@
 
 		Formex_Class.prototype.updateOptions = function(opts) {
 			opts ? $.extend(this.defaults, opts) : '';
+			this.updateData(this.elems);
 		};
 
 		Formex_Class.prototype.init = function() {
 			var that = this;
 
-			that.elems = that.$instance.find('input[type!=submit][type!=hidden][type!=reset], textarea, select');
-
-			that.elems.each(function(){
+			that.$instance.find('input[type!=submit][type!=hidden][type!=reset], textarea, select').each(function(){
 				that.add($(this));
 			});
 
 			that.setHandlers();
 		};
 
-		Formex_Class.prototype.add = function(elem) {
-			var type = elem.attr('type');
-			var name = elem.attr('name');
-			switch (type) {
-				case 'radio' :
-				case 'checkbox' :
-					if (!name) {
-						this.elems = this.elems.not(elem);
-						elem.remove();
-						return;
-					}
-					break;
-				default:
-			}
+		Formex_Class.prototype.add = function(elems) {
+			var that = this;
+			elems.each(function(){
+				var elem = $(this);
+				var type = elem.attr('type');
+				var name = elem.attr('name');
+				switch (type) {
+					case 'radio' :
+					case 'checkbox' :
+						if (!name) {
+							elem.remove();
+							return;
+						}
+						break;
+					default:
+				}
 
-			this.setData(elem);
-			this.wrap(elem);
-			this.appendWarning(elem);
-			this.setShouldbe(elem);
-			this.valid(elem);
+				that.updateData(elem);
+				that.wrap(elem);
+				that.appendWarning(elem);
+				that.setShouldbe(elem);
+				that.valid(elem);
 
-			if (this.defaults.autoinit) {
-				this.valid(elem);
-				this.performAction(elem);
-				this.checkGlobalStatus();
-			}
+				if (that.defaults.autoinit) {
+					that.valid(elem);
+					that.performAction(elem);
+					that.checkGlobalStatus();
+				}
 
-			if (this.$instance.find(this.defaults.exclude).is(elem)) {
-				this.exclude(elem);
-			}
+				if (that.$instance.find(that.defaults.exclude).is(elem)) {
+					that.exclude(elem);
+				} else {
+					that.elems = that.elems.add(elem);
+				}
+			});
 		};
 
-		Formex_Class.prototype.setData = function(elem) {
+		Formex_Class.prototype.updateData = function(elems) {
 			var that = this;
+			elems.each(function(){
+				var elem = $(this);
+				var data = elem.data(window.veryform.classnames.main);
 
-			that.repairType(elem);
+				if (!data) {
+					that.repairType(elem);
 
-			var name = elem.attr('name');
-			var type = elem.attr('type');
+					var name = elem.attr('name');
+					var type = elem.attr('type');
 
-			var elemdata = {};
-			var data = {};
-			elemdata['id'] = this.elemsCounter;
-			elemdata['data'] = data;
-			elemdata['validOnStart'] = false;
+					var elemdata = {};
+					var data = {};
+					elemdata['id'] = that.elemsCounter;
+					elemdata['data'] = data;
+					elemdata['validOnStart'] = false;
 
-			for (var i in this.datas.elems) {
-				if (this.datas.elems[i]['data']['name'] == name) {
+					for (var i in that.datas.elems) {
+						if (that.datas.elems[i]['data']['name'] == name) {
 
-					this.datas.elems[i]['data']['sum']++;
+							that.datas.elems[i]['data']['sum']++;
 
-					elemdata['data'] = this.datas.elems[i]['data'];
-					this.datas.elems.push(elemdata);
+							elemdata['data'] = that.datas.elems[i]['data'];
+							that.datas.elems.push(elemdata);
+							elem.data(window.veryform.classnames.main, elemdata);
+							that.applyHandler(elem);
+							that.elemsCounter++;
+							return;
+						}
+					}
+
+					data['elem'] = elem;
+					data['type'] = type ? type : elem[0]['localName'];
+					data['name'] = name;
+					data['valid'] = false;
+					data['sum'] = 1; //elems with the same name
+					data['is'] = 0;
+					data['wrapped'] = false;
+					data['shouldbe'] = 0;
+					elemdata['eventHandler'] = undefined;
+					elemdata['eventName'] = undefined;
+
+					!that.datas.elems ? that.datas.elems = [] : '';
+					that.datas.elems.push(elemdata);
 					elem.data(window.veryform.classnames.main, elemdata);
+					that.elemsCounter++;
 					that.applyHandler(elem);
-					this.elemsCounter++;
-					return;
+					elem.addClass(window.veryform.classnames.elem);
 				}
-			}
 
-			data['elem'] = elem;
-			data['type'] = type ? type : elem[0]['localName'];
-			data['name'] = name;
-			data['valid'] = false;
-			data['sum'] = 1; //elems with the same name
-			data['is'] = 0;
-			data['wrapped'] = false;
-			data['shouldbe'] = 0;
-			data['eventHandler'] = undefined;
-			data['eventName'] = undefined;
-
-			!that.datas.elems ? that.datas.elems = [] : '';
-			that.datas.elems.push(elemdata);
-			elem.data(window.veryform.classnames.main, elemdata);
-			that.elemsCounter++;
-
-			that.applyRegex(elem);
-			that.applyWarnings(elem);
-			that.repairRegex(elem);
-			that.applyHandler(elem);
-
-			elem.addClass(window.veryform.classnames.elem);
-			elem.removeAttr('required');
-			!that.defaults.autocomplete ? elem.attr('autocomplete', 'off') : '';
+				that.applyRegex(elem);
+				that.applyWarnings(elem);
+				elem.removeAttr('required');
+				!that.defaults.autocomplete ? elem.attr('autocomplete', 'off') : '';
+			});
 		};
 
 		Formex_Class.prototype.applyRegex = function(elem) {
@@ -216,9 +229,13 @@
 
 		Formex_Class.prototype.exclude = function(elems) {
 			var that = this;
+
 			elems.each(function(){
-				var data = $(this).data(window.veryform.classnames.main);
-				that.off($(this), data['data']['eventName'], data['data']['eventHandler']);
+				var elem = $(this);
+
+				var data = elem.data(window.veryform.classnames.main);
+
+				that.off(elem, data['eventName'], data['eventHandler']);
 				data['data']['sum']--;
 				for (var i in that.datas.elems) {
 					var index = parseInt(i);
@@ -227,7 +244,9 @@
 						break;
 					}
 				}
-				$(this).removeData(window.veryform.classnames.main);
+				that.unwrap(elem);
+				elem.removeData(window.veryform.classnames.main);
+				that.elems = that.elems.not(elem);
 			});
 		};
 
@@ -360,6 +379,29 @@
 			}
 		};
 
+		Formex_Class.prototype.unwrap = function(elems) {
+			elems.each(function(){
+				var elem = $(this);
+				var data = elem.data(window.veryform.classnames.main);
+
+				if (data['data']['wrapped']) {
+					var name = data['data']['name'];
+					var wrap = elem.parents(_(window.veryform.classnames.wrap));
+					var elemsToUnwrap = $();
+
+					$('[name=' + name + ']').each(function(){
+						elemsToUnwrap = elemsToUnwrap.add($(this));
+						elemsToUnwrap = elemsToUnwrap.add($(this).parents('form').find('label[for=' + $(this).attr('id') + ']'));
+					});
+
+					wrap.find(_(window.veryform.classnames.warning)).remove();
+					elemsToUnwrap.unwrap();
+
+					data['data']['wrapped'] = false;
+				}
+			})
+		};
+
 		Formex_Class.prototype.appendWarning = function(elem) {
 			var that = this;
 			var data = elem.data(window.veryform.classnames.main);
@@ -423,8 +465,8 @@
 					}
 				break;
 			}
-			data['data']['eventName'] = eventName
-			data['data']['eventHandler'] = eventHandler;
+			data['eventName'] = eventName
+			data['eventHandler'] = eventHandler;
 			that.on(elem, eventName, eventHandler);
 			that.on(elem, 'ontrue', function(){
 				if (that.defaults.displayWarnings) {
@@ -442,8 +484,8 @@
 
 		Formex_Class.prototype.setHandlers = function(event) {
 			var that = this;
-			if (that.defaults.validateOnSubmit) {
-				that.$instance.submit(function(e) {
+			that.$instance.submit(function(e) {
+				if (that.defaults.validateOnSubmit) {
 					var focused = false;
 					var error = false;
 
@@ -458,13 +500,14 @@
 							}
 						}
 					}
+
 					if (error) {
 						e.preventDefault();
 						e.stopPropagation();
 						e.stopImmediatePropagation();
 					}
-				});
-			}
+				}
+			});
 		};
 
 		Formex_Class.prototype.checkGlobalStatus = function() {
