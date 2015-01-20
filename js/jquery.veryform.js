@@ -1,7 +1,7 @@
 /**
  * Copyright (c) Bartłomiej Semańczyk - bartekss2@gmail.com http://www.blue-world.pl
  * @version 1.2
- * Last Update: Monday, 19 January 2015
+ * Last Update: Monday, 20 January 2015
 */
 
 (function($) {
@@ -124,8 +124,6 @@
 				}
 
 				that.updateData(elem);
-				that.wrap(elem);
-				that.appendWarning(elem);
 				that.setShouldbe(elem);
 				that.valid(elem);
 
@@ -221,10 +219,14 @@
 			for (var i in that.defaults.warnings) {
 				if (that.$instance.find(i).is(elem)) {
 					that.setDataParameter(elem, 'warning', that.defaults.warnings[i]);
+					that.wrap(elem);
+					that.appendWarning(elem);
 					return;
 				};
 			}
 			that.setDataParameter(elem, 'warning', warnings[data['data']['type']]);
+			that.wrap(elem);
+			that.appendWarning(elem);
 		};
 
 		Formex_Class.prototype.exclude = function(elems) {
@@ -409,6 +411,8 @@
 			var $wrapper = elem.parents(_(window.veryform.classnames.wrap));
 			if (!$wrapper.find(_(window.veryform.classnames.warning)).length) {
 				$wrapper.append($warning);
+			} else {
+				$wrapper.find(_(window.veryform.classnames.warning)).html(data['data']['warning']);
 			}
 		};
 
