@@ -1,7 +1,7 @@
 /**
  * Copyright (c) Bartłomiej Semańczyk - bartekss2@gmail.com http://www.blue-world.pl
- * @version 1.2
- * Last Update: Monday, 20 January 2015
+ * @version 1.4
+ * Last Update: Wednesday, 21 January 2015
 */
 
 (function($) {
@@ -70,6 +70,7 @@
 				regex: {},
 				warnings: {}
 			};
+			this.updating = false;
 
 			this.elemsCounter = 0;
 
@@ -124,19 +125,9 @@
 				}
 
 				that.updateData(elem);
-				that.setShouldbe(elem);
-				that.valid(elem);
-
 				if (that.defaults.autoinit) {
-					that.valid(elem);
 					that.performAction(elem);
 					that.checkGlobalStatus();
-				}
-
-				if (that.$instance.find(that.defaults.exclude).is(elem)) {
-					that.exclude(elem);
-				} else {
-					that.elems = that.elems.add(elem);
 				}
 			});
 		};
@@ -145,86 +136,126 @@
 			var that = this;
 			elems.each(function(){
 				var elem = $(this);
-				var data = elem.data(window.veryform.classnames.main);
-
-				if (!data) {
-					that.repairType(elem);
-
-					var name = elem.attr('name');
-					var type = elem.attr('type');
-
-					var elemdata = {};
-					var data = {};
-					elemdata['id'] = that.elemsCounter;
-					elemdata['data'] = data;
-					elemdata['validOnStart'] = false;
-
-					for (var i in that.datas.elems) {
-						if (that.datas.elems[i]['data']['name'] == name) {
-
-							that.datas.elems[i]['data']['sum']++;
-
-							elemdata['data'] = that.datas.elems[i]['data'];
-							that.datas.elems.push(elemdata);
-							elem.data(window.veryform.classnames.main, elemdata);
-							that.applyHandler(elem);
-							that.elemsCounter++;
-							return;
-						}
-					}
-
-					data['elem'] = elem;
-					data['type'] = type ? type : elem[0]['localName'];
-					data['name'] = name;
-					data['valid'] = false;
-					data['sum'] = 1; //elems with the same name
-					data['is'] = 0;
-					data['wrapped'] = false;
-					data['shouldbe'] = 0;
-					elemdata['eventHandler'] = undefined;
-					elemdata['eventName'] = undefined;
-
-					!that.datas.elems ? that.datas.elems = [] : '';
-					that.datas.elems.push(elemdata);
-					elem.data(window.veryform.classnames.main, elemdata);
-					that.elemsCounter++;
-					that.applyHandler(elem);
-					elem.addClass(window.veryform.classnames.elem);
-				}
-
+				that.updating = true;
+				that.setData(elem);
 				that.applyRegex(elem);
 				that.applyWarnings(elem);
 				elem.removeAttr('required');
 				!that.defaults.autocomplete ? elem.attr('autocomplete', 'off') : '';
+
+				that.setShouldbe(elem);
+				that.valid(elem);
+
+				if (that.$instance.find(that.defaults.exclude).is(elem)) {
+					that.exclude(elem);
+				} else {
+					that.elems = !that.elems.is(elem) ? that.elems.add(elem) : that.elems;
+				}
+				that.updating = false;
 			});
+		};
+
+		Formex_Class.prototype.setData = function(elem) {
+			var that = this;
+			var data = elem.data(window.veryform.classnames.main);
+
+			if (!data) {
+				that.repairType(elem);
+
+				var name = elem.attr('name');
+				var type = elem.attr('type');
+
+				var elemdata = {};
+				var data = {};
+				elemdata['id'] = that.elemsCounter;
+				elemdata['data'] = data;
+				elemdata['validOnStart'] = false;
+
+				for (var i in that.datas.elems) {
+					if (that.datas.elems[i]['data']['name'] == name) {
+
+						that.datas.elems[i]['data']['sum']++;
+
+						elemdata['data'] = that.datas.elems[i]['data'];
+						that.datas.elems.push(elemdata);
+						elem.data(window.veryform.classnames.main, elemdata);
+						that.applyHandler(elem);
+						that.elemsCounter++;
+						return;
+					}
+				}
+
+				data['elem'] = elem;
+				data['type'] = type ? type : elem[0]['localName'];
+				data['name'] = name;
+				data['valid'] = false;
+				data['sum'] = 1; //elems with the same name
+				data['is'] = 0;
+				data['wrapped'] = false;
+				data['shouldbe'] = 0;
+				elemdata['eventHandler'] = undefined;
+				elemdata['eventName'] = undefined;
+
+				!that.datas.elems ? that.datas.elems = [] : '';
+				that.datas.elems.push(elemdata);
+				elem.data(window.veryform.classnames.main, elemdata);
+				that.elemsCounter++;
+				that.applyHandler(elem);
+				elem.addClass(window.veryform.classnames.elem);
+			}
 		};
 
 		Formex_Class.prototype.applyRegex = function(elem) {
 			var that = this;
 			var data = elem.data(window.veryform.classnames.main);
+			var applied = false;
 			for (var i in that.defaults.regex) {
 				if (that.$instance.find(i).is(elem)) {
 					that.setDataParameter(elem, 'regex', that.defaults.regex[i]);
-					that.repairRegex(elem);
-					return;
+					applied = true;
 				}
 			}
-			that.setDataParameter(elem, 'regex', regex[data['data']['type']]);
+			!applied ? that.setDataParameter(elem, 'regex', regex[data['data']['type']]) : '';
 			that.repairRegex(elem);
+		};
+
+		Formex_Class.prototype.repairRegex = function(elem) {
+			var that = this;
+			var data = elem.data(window.veryform.classnames.main);
+			var type = data['data']['type'];
+			var rgx = data['data']['regex'];
+
+			switch (type) {
+				case 'text' :
+				case 'textarea' :
+				case 'email':
+				case 'password':
+					!rgx.match(/^\/.*\/[img]{1,3}/g) ? that.setDataParameter(elem, 'regex', regex[type]): '';
+				break;
+
+				case 'radio':
+				case 'checkbox':
+				case 'select':
+					isNaN(rgx) ? that.setDataParameter(elem, 'regex', regex[type]): '';
+				break;
+
+				case 'file':
+					rgx !== true && rgx !== false ? that.setDataParameter(elem, 'regex', regex[type]): '';
+				break;
+			}
 		};
 
 		Formex_Class.prototype.applyWarnings = function(elem) {
 			var that = this;
 			var data = elem.data(window.veryform.classnames.main);
+			var applied = false;
 			for (var i in that.defaults.warnings) {
 				if (that.$instance.find(i).is(elem)) {
 					that.setDataParameter(elem, 'warning', that.defaults.warnings[i]);
-					that.wrap(elem);
-					that.appendWarning(elem);
-					return;
+					applied = true;
 				};
 			}
-			that.setDataParameter(elem, 'warning', warnings[data['data']['type']]);
+			!applied ? that.setDataParameter(elem, 'warning', warnings[data['data']['type']]) : '';
 			that.wrap(elem);
 			that.appendWarning(elem);
 		};
@@ -262,31 +293,6 @@
 			elem[0]['localName'] == 'input' && !elem.attr('type') ? elem.attr('type', 'text') : '';
 		};
 
-		Formex_Class.prototype.repairRegex = function(elem) {
-			var that = this;
-			var data = elem.data(window.veryform.classnames.main);
-			var type = data['data']['type'];
-			var rgx = data['data']['regex'];
-			switch (type) {
-				case 'text' :
-				case 'textarea' :
-				case 'email':
-				case 'password':
-					!rgx.match(/^\/.*\/[img]{1,3}/g) ? that.setDataParameter(elem, 'regex', regex[type]): '';
-				break;
-
-				case 'radio':
-				case 'checkbox':
-				case 'select':
-					isNaN(rgx) ? that.setDataParameter(elem, 'regex', regex[type]): '';
-				break;
-
-				case 'file':
-					rgx !== true && rgx !== false ? that.setDataParameter(elem, 'regex', regex[type]): '';
-				break;
-			}
-		};
-
 		Formex_Class.prototype.setShouldbe = function(elem) {
 			var that = this;
 			var data = elem.data(window.veryform.classnames.main);
@@ -303,7 +309,7 @@
 					data['data']['shouldbe'] = data['data']['regex'] == true ? 1 : 0;
 					data['data']['maxFileSize'] = that.defaults.maxFileSize;
 				break;
-				default: data['data']['shouldbe']++;
+				default: data['data']['shouldbe'] = 1;
 				break;
 			}
 		};
@@ -324,10 +330,12 @@
 					data['data']['is'] = value.match(regex_object) ? Math.min(++data['data']['is'], 1) : Math.max(--data['data']['is'], 0);
 				break;
 				case 'radio':
-					elem.is(':checked') ? data['data']['is'] = 1 : validOnStart ? data['data']['is'] = 0 : '';
+					elem.is(':checked') ? data['data']['is'] = 1 : !that.updating ? data['data']['is'] = 0 : '';
 				break;
 				case 'checkbox':
-					elem.is(':checked') ? data['data']['is']++ : validOnStart ? data['data']['is']-- : '';
+					elem.is(':checked') ? that.updating && validOnStart ? '' : data['data']['is']++:
+						!that.updating ? data['data']['is']-- : '' ;
+
 				break;
 				case 'select':
 					var value = elem.val();
@@ -349,7 +357,9 @@
 
 		Formex_Class.prototype.performAction = function(elem) {
 			var data = elem.data(window.veryform.classnames.main);
-			data['data']['valid'] ? elem.trigger('ontrue') : elem.trigger('onfalse');
+			if (data) {
+				data['data']['valid'] ? elem.trigger('ontrue') : elem.trigger('onfalse');
+			}
 		};
 
 		Formex_Class.prototype.wrap = function(elem) {
