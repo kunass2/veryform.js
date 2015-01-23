@@ -1,7 +1,7 @@
 /**
  * Copyright (c) Bartłomiej Semańczyk - bartekss2@gmail.com http://www.blue-world.pl
- * @version 1.4
- * Last Update: Wednesday, 21 January 2015
+ * @version 1.5
+ * Last Update: Wednesday, 23 January 2015
 */
 
 (function($) {
@@ -31,7 +31,7 @@
 
 	var Veryform = (function() {
 
-		var regex = { //to extend
+		var regex = {
 			text: '/[^\\s]+/i',
 			email: '/^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$/i',
 			checkbox: 1,
@@ -60,7 +60,7 @@
 			this.defaults = {
 				wrap: true,
 				displayWarnings: true,
-				maxFileSize: 5000000,
+				maxFileSize: 50000,
 				validateOnSubmit: true,
 				init: true,
 				autoinit: false,
@@ -193,6 +193,7 @@
 				data['is'] = 0;
 				data['wrapped'] = false;
 				data['shouldbe'] = 0;
+				data['out'] = false;
 				elemdata['eventHandler'] = undefined;
 				elemdata['eventName'] = undefined;
 
@@ -343,7 +344,7 @@
 				break;
 				case 'file':
 					var value = elem.val();
-					data['data']['is'] = value.length > 0 && data['data']['recentFileSize'] && (data['recentFileSize'] <= data['maxFileSize']) ? 1 : 0;
+					data['data']['is'] = value.length > 0 && data['data']['recentFileSize'] && (data['data']['recentFileSize'] <= data['data']['maxFileSize']) ? 1 : 0;
 				break;
 			}
 			data['validOnStart'] = true;
@@ -434,6 +435,22 @@
 			elem.off(eventName, eventHandler);
 		};
 
+		Formex_Class.prototype.out = function(elems) {
+			elems.each(function(){
+				var elem = $(this);
+				var data = elem.data(window.veryform.classnames.main);
+				data['data']['out'] = true;
+			});
+		};
+
+		Formex_Class.prototype.in = function(elems) {
+			elems.each(function(){
+				var elem = $(this);
+				var data = elem.data(window.veryform.classnames.main);
+				data['data']['out'] = false;
+			});
+		};
+
 		Formex_Class.prototype.applyHandler = function(elem) {
 			var that = this;
 			var data = elem.data(window.veryform.classnames.main);
@@ -483,15 +500,15 @@
 			data['eventHandler'] = eventHandler;
 			that.on(elem, eventName, eventHandler);
 			that.on(elem, 'ontrue', function(){
+				elem.parents(_(window.veryform.classnames.wrap)).removeClass(window.veryform.classnames.negative).addClass(window.veryform.classnames.positive);
 				if (that.defaults.displayWarnings) {
 					elem.parents(_(window.veryform.classnames.wrap)).find(_(window.veryform.classnames.warning)).hide(300);
-					elem.parents(_(window.veryform.classnames.wrap)).removeClass(window.veryform.classnames.negative).addClass(window.veryform.classnames.positive);
 				}
 			});
 			that.on(elem, 'onfalse', function(){
+				elem.parents(_(window.veryform.classnames.wrap)).removeClass(window.veryform.classnames.positive).addClass(window.veryform.classnames.negative);
 				if (that.defaults.displayWarnings) {
 					elem.parents(_(window.veryform.classnames.wrap)).find(_(window.veryform.classnames.warning)).show(300);
-					elem.parents(_(window.veryform.classnames.wrap)).removeClass(window.veryform.classnames.positive).addClass(window.veryform.classnames.negative);
 				}
 			})
 		};
@@ -528,7 +545,9 @@
 			var that = this;
 			var isSuccess = true;
 			for (var i in that.datas.elems) {
-				if (!that.datas.elems[i]['data']['valid']) {
+				var valid = that.datas.elems[i]['data']['valid']
+				var out = that.datas.elems[i]['data']['out']
+				if (!valid && !out) {
 					isSuccess = false;
 					that.$instance.removeClass(window.veryform.classnames.success).addClass(window.veryform.classnames.failure);
 					return;
